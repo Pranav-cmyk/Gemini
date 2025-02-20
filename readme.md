@@ -118,7 +118,7 @@ async def voice_interaction():
 
     try:
         #You can specify the voice from a list of predefined voices defined in this method. Hover over the method for more info on voices.
-        #You can enable voice_input and the code will listen to your otherwise by default the method will wait for a text input from the user.
+        #You can enable voice_input and the code will listen to your microphone otherwise by default the method will wait for a text input from the user.
         #if voice_input_enabled is set to True, You can specify the duration of the recording in seconds.
         await gemini.start_voice_interaction(
             voice = 'Aoede',

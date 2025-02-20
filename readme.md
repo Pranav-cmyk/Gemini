@@ -32,13 +32,14 @@ pip install -r requirements.txt
 
 ## Usage
 
+
 ```python
 import os
 import google.generativeai as genai
 from Gemini.Google_Gemini import Google_Gemini  # Adjust import path if needed
 ```
 
-# Option 1: Initialize with the API key from the environment variable
+# Option 1: Initialize the API key as an environment variable
 ```python
 api_key = os.environ.get("GOOGLE_API_KEY")
 if api_key is None:
@@ -48,19 +49,24 @@ gemini = GoogleGemini(api_key = api_key)
 ```
 
 # Option 2: Create a .env file with the API key
-In your .env file, add the line: GOOGLE_API_KEY=YOUR_API_KEY after which
-the GoogleGemini class will automatically load the API key from the .env file.
+In a .env file, add the line:
+```
+GOOGLE_API_KEY=YOUR_API_KEY 
+```
+in the same directory as your script. The GoogleGemini class will automatically load the API key from the .env file.
 
 
 # Example 1: Using the conversational_assistant method
 ```python
-from Google_Gemini_main import GoogleGemini, GeminiContentConfig
+from Google_Gemini import GoogleGemini, GeminiContentConfig
 from google.genai.types import Tool, GoogleSearch
 from os import path, listdir
 
 
-# Tool Code execution is not supported with file or url uploads # 
-# but google_search is supported
+# Tool Code execution is not supported with file or url uploads but is supported with the default initialisation of the conversational_assistant method
+
+# however google_search is supported for any config of the conversational_assistant method
+
 # Change that and configure additional parameters
 
 search_tool = Tool(
@@ -111,9 +117,9 @@ async def voice_interaction():
     gemini = Google_Gemini()
 
     try:
-        #You can specify the voice from a list of predefined voices
-        #You can enable voice_input and the code will listen to your 
-        #voice for the specified recording_duration
+        #You can specify the voice from a list of predefined voices defined in this method. Hover over the method for more info on voices.
+        #You can enable voice_input and the code will listen to your otherwise by default the method will wait for a text input from the user.
+        #if voice_input_enabled is set to True, You can specify the duration of the recording in seconds.
         await gemini.start_voice_interaction(
             voice = 'Aoede',
             voice_input_enabled = True,

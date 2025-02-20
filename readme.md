@@ -80,6 +80,7 @@ custom_config = GeminiContentConfig(
 gemini = GoogleGemini(content_config=custom_config)
 
 #helper method to get a list of all files from a directory
+#These files can be of mime type pdf, mp4, .py and so on
 def get_files(directory):
     return [path.join(directory, f) for f in listdir(directory)]
 

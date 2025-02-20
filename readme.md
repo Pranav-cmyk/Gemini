@@ -32,13 +32,6 @@ pip install -r requirements.txt
 
 ## Usage
 
-
-```python
-import os
-import google.generativeai as genai
-from Gemini.Google_Gemini import Google_Gemini  # Adjust import path if needed
-```
-
 # Option 1: Initialize the API key as an environment variable
 ```python
 api_key = os.environ.get("GOOGLE_API_KEY")

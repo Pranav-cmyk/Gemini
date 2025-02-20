@@ -31,6 +31,11 @@ pip install -r requirements.txt
 
 
 ## Usage
+```python
+import os
+from Google_Gemini import GoogleGemini, GeminiContentConfig
+from google.genai.types import Tool, GoogleSearch
+```
 
 # Option 1: Initialize the API key as an environment variable
 ```python
@@ -51,10 +56,6 @@ in the same directory as your script. The GoogleGemini class will automatically 
 
 # Example 1: Using the conversational_assistant method
 ```python
-from Google_Gemini import GoogleGemini, GeminiContentConfig
-from google.genai.types import Tool, GoogleSearch
-from os import path, listdir
-
 
 # Tool Code execution is not supported with file or url uploads but is supported with the default initialisation of the conversational_assistant method
 

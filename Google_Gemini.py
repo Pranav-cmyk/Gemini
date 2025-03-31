@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from os import getenv, remove
+from os import getenv
 from dotenv import load_dotenv
 from google.genai import Client
 from google.genai.types import (
@@ -10,25 +10,25 @@ from google.genai.types import (
 )
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.logging import RichHandler
 from sounddevice import OutputStream, InputStream
 from numpy import (
-    int16, frombuffer, concatenate, float32, ndarray
+    frombuffer, concatenate, float32, ndarray
 )
 from typing import List, Any, Optional
-from torch import device, cuda
+from torch import device, cuda, tensor, float32
 from warnings import filterwarnings
-from whisper import load_model, load_audio
+from whisper import load_model
 import time
-import wave
 import logging
-import os
-
 
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level = logging.INFO,
+    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers = [RichHandler(rich_tracebacks=True)]
 )
 logger = logging.getLogger("Gemini-Logger")
+
 
 load_dotenv()
 
@@ -88,7 +88,7 @@ class GeminiLiveConfig:
     ))
     generation_config: GenerationConfig = field(default_factory=lambda: GenerationConfig(
         temperature=0.9,
-        max_output_tokens=8024,
+        max_output_tokens=1024,
         top_k=10,
         top_p=0.9,
     ))
@@ -165,13 +165,13 @@ class GoogleGemini:
         self.live_config = (live_config or GeminiLiveConfig()).to_live_connect_config()
         self.chat = None
         self._initialize_client(api_key)
+        self.device_ = device("cuda" if cuda.is_available() else "cpu")
+        filterwarnings("ignore", category=FutureWarning)
         self._initalize_whisper_model()
         
     def _initalize_whisper_model(self) -> None:
         try:
-            device_ = device("cuda" if cuda.is_available() else "cpu")
-            filterwarnings("ignore", category=FutureWarning)
-            self.whisper_model = load_model('turbo').to(device_)
+            self.whisper_model = load_model('turbo').to(self.device_)
             logger.info("Whisper model initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Whisper model: {e}")
@@ -305,7 +305,6 @@ class GoogleGemini:
         recording_duration: int
     ) -> None:
         """Handle voice interaction session."""
-        response_file = 'response.wav'
         
         try:
             while True:
@@ -321,27 +320,20 @@ class GoogleGemini:
                 
                 await session.send(input=prompt, end_of_turn=True)
                 response_audio = await self._get_voice_output(session, prompt)
-                self._save_audio(response_audio, response_file)
-                self._transcribe_audio(response_file, speaker="Gemini")
+                self._transcribe_audio(audio_data = response_audio, speaker="Gemini")
         
         except KeyboardInterrupt:
             logger.info("Voice interaction ended by keyboard interrupt")
             
-        finally:
-            if os.path.exists(response_file):
-                remove(response_file)
 
     async def _handle_voice_input(self, recording_duration: int) -> str:
         """Handle voice input processing."""
-        input_file = 'input.wav'
         try:
             audio_data = self._record_audio(recording_duration)
-            self._save_audio(audio_data, input_file)
-            prompt = self._transcribe_audio(input_file, speaker="User")
+            prompt = self._transcribe_audio(audio_data, speaker="User")
             return prompt
-        finally:
-            if os.path.exists(input_file):
-                remove(input_file)
+        except Exception as e:
+            logger.error(f"Error processing voice input: {e}")
 
 
     def _delete_files(self, files: List[Any]) -> None:
@@ -501,7 +493,7 @@ class GoogleGemini:
             AudioProcessingError: If recording fails
         """
         try:
-            with InputStream(samplerate=fs, channels=1, dtype=float32) as stream:
+            with InputStream(samplerate=fs, channels=1) as stream:
                 logger.info("Starting audio recording...")
                 audio = stream.read(int(duration * fs))[0]
                 logger.info("Audio recording completed")
@@ -510,35 +502,12 @@ class GoogleGemini:
             logger.error(f"Audio recording error: {e}")
             raise AudioProcessingError(f"Error recording audio: {e}")
 
-    def _save_audio(self, audio: ndarray, filename: str, fs: int = 24340) -> None:
-        """
-        Save audio data to a WAV file.
-        
-        Args:
-            audio: Audio data to save
-            filename: Output filename
-            fs: Sampling frequency in Hz
-            
-        Raises:
-            FileProcessingError: If saving audio fails
-        """
-        try:
-            with wave.open(filename, 'wb') as wf:
-                wf.setnchannels(1)
-                wf.setsampwidth(2)
-                wf.setframerate(fs)
-                wf.writeframes((audio * 32767).astype(int16).tobytes())
-            logger.info(f"Audio saved successfully to {filename}")
-        except Exception as e:
-            logger.error(f"Audio save error: {e}")
-            raise FileProcessingError(f"Error saving audio file: {e}")
-
-    def _transcribe_audio(self, audio_file: str, speaker: str = '') -> str:
+    def _transcribe_audio(self, audio_data: str, speaker: str = '') -> str:
         """
         Transcribe audio file to text.
         
         Args:
-            audio_file: Path to audio file
+            audio_data: Raw audio data
             
         Returns:
             str: Transcribed text
@@ -547,17 +516,13 @@ class GoogleGemini:
             TranscriptionError: If transcription fails
         """
         try:
-            audio_file = load_audio(audio_file, 16000)
-            transcription = self.whisper_model.transcribe(
-                audio = audio_file,
-                )
+            audio_data = tensor(audio_data.flatten(), dtype = float32).to(self.device_)
+            transcription = self.whisper_model.transcribe(audio_data)
             text = transcription.get('text', '')
             logger.info("Audio transcription completed successfully")
             self.console.print(f"{speaker}: {text}")
             return text
-        except FileNotFoundError:
-            logger.error(f"Audio file not found: {audio_file}")
-            raise TranscriptionError("Audio file not found")
+
         except Exception as e:
             logger.error(f"Transcription error: {e}")
             raise TranscriptionError(f"Error transcribing audio: {e}")

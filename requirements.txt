@@ -4,12 +4,6 @@ google.genai
 rich
 sounddevice
 numpy
-typing
 openai-whisper
 wave
-logging
-
-#Replace this with your version of torch that supports CUDA
-#pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-#or just install base torch to run the class on cpu
-torch
+pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124
